@@ -17,12 +17,10 @@ function [rgb_value_array] = getLEDRGB(movie_path, LED_color)
 try
     ref_video_obj = VideoReader(movie_path);
 catch
-    error(['次のmovieを読み込むことができませんでした。動画を確認してください: ' movie_path]);
+    error(['The following movie could not be loaded. Please check that the video is working properly: ' movie_path]);
 end
 
 rgb_value_array = nan(3, ref_video_obj.NumFrames);
-
-% ref_video_objから画像オブジェクトを抽出(動画終わるまでiteration)
 frame_idx = 0;
 while frame_idx < ref_video_obj.NumFrames
     frame_idx = frame_idx + 1;
@@ -32,7 +30,7 @@ while frame_idx < ref_video_obj.NumFrames
         continue;
     end
 
-    % LEDの位置を選んでもらって座標を取得する
+    % Obtaining the image coordinates(x, y) of an LED by GUI operation
     if frame_idx == 1
         while true
             disp(['Please click on the ' LED_color ' LED']);
@@ -59,15 +57,16 @@ while frame_idx < ref_video_obj.NumFrames
         end
     end
 
-    % LEDの輝度値を算出する。
+    % get the RGB value of LED
     rgb_value_array(1, frame_idx) = ref_frame_img(LED_y, LED_x, 1);
     rgb_value_array(2, frame_idx) = ref_frame_img(LED_y, LED_x, 2);
     rgb_value_array(3, frame_idx) = ref_frame_img(LED_y, LED_x, 3);
 
-    % 明示的にclear(メモリを解放するため)
     clear ref_frame_img;
 end
-% NaN値を線形補完で埋める
+
+% linear interpolation of NaN values
+% (Somehow there are frame in 'ref_vide_obj' that can't be read, so this is the operation to deal with the problem)
 for color_idx = 1:3
     ref_color_value_array= rgb_value_array(color_idx, :);
     have_value_indicies = find(~isnan(ref_color_value_array));
