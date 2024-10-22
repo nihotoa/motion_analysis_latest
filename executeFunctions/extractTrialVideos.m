@@ -32,6 +32,7 @@ post: comming soon...
 
 [caution!!]
 出力される動画は問答無用で.mp4(めんどくさいから)
+タスク開始は青色LEDが消える瞬間、タスク終了は青色LEDが点灯する瞬間であることに注意
 
 [Improvement points(Japanaese)]
 >dirdir, uiselectはEMG_analysis_latestのttbで定義されているので、commonCodeと一緒に、このプロジェクトの兄弟ディレクトリの中に
@@ -47,7 +48,8 @@ clear;
 %% set param
 task_movie_extension = 'mp4';  
 monkeyname = 'Hu';
-LED_color = 'red'; % 'red' / 'blue'
+LED_color = 'blue'; % 'red' / 'blue'
+record_Hz = 200; % recording framerate[Hz]
 
 %% code section
 realname = get_real_name(monkeyname);
@@ -114,7 +116,15 @@ for date_index = 1:length(ref_dates)
     
             % find the start and end timing by using 'rgb_value_array'
             focus_rgb_array =  rgb_value_array(focus_rgb_index, :);
-            [start_timings, end_timings] = findBinaryChanges(focus_rgb_array);
+            switch LED_color
+                case 'red'
+                    [start_timings, end_timings] = findBinaryChanges(focus_rgb_array);
+                case 'blue'
+                    [end_timings, start_timings] = findBinaryChanges(focus_rgb_array);
+                    validate_end_timing_indices = not(end_timings(1, :) == 1);
+                    end_timings = end_timings(validate_end_timing_indices);
+                    start_timings = start_timings(1:length(end_timings));
+            end
     
             ref_timing_data_struct = struct();
             start_timing_indecies = ones(1, length(start_timings)) * start_timing_id;
@@ -126,23 +136,44 @@ for date_index = 1:length(ref_dates)
         save(fullfile(timing_save_fold_path, timing_file_name), 'ref_timings_frame_idx_list')
     end
 
-    % extract and save video from each trial
+    %% extract and save video from each trial
+    % load timing data from alphaOmega
+    common_part_name = [monkeyname ref_date(3:end)];
+    tp_path = fullfile(fileparts(base_dir), 'EMG_analysis_latest', 'data', realname, 'easyData', [common_part_name '_standard'], [common_part_name '_EasyData.mat']);
+    load(tp_path, 'Tp', 'EMG_Hz');
+
+    % format timing data for comparison with timing data from video;
+    real_timing_data = [Tp(:, start_timing_id)'; Tp(:, end_timing_id)'];
+    real_timing_data = round(real_timing_data * (record_Hz/EMG_Hz));
+
+    % synchronize EMG and video for each camera
     for camera_id = camera_indicies
+        % load timing data extracted from video
         ref_camera_task_timing_struct = ref_timings_frame_idx_list{camera_id};
         ref_camera_task_timing = [ref_camera_task_timing_struct.start_timing(1, :); ref_camera_task_timing_struct.end_timing(1, :)];
+
+        synchronized_timings = makeSynchronizedTimingArray(real_timing_data, ref_camera_task_timing);
+
+        if isempty(synchronized_timings)
+            warning([ref_date '-camera' num2str(camera_id) ' was unable to synchronize with EMG, so it was not possible to extract the video'])
+            continue;
+        end
+
+        % loading the video to be cut out & make folder to save trimmed videos
         ref_camera_movie_path = fullfile(ref_task_movie_fold, ['camera' num2str(camera_id) '.' task_movie_extension]);
-        [~, trial_num] = size(ref_camera_task_timing);
+        [~, trial_num] = size(synchronized_timings);
         full_movie_obj = VideoReader(ref_camera_movie_path);
         save_trial_movie_fold_path = fullfile(save_movie_fold_dir, 'trimmed', [timing_label '_on_off'], ref_date, ['camera' num2str(camera_id)]);
         makefold(save_trial_movie_fold_path);
-
+        
+        % extract only the trial part from the video and save them as a new video
         for trial_id = 1:trial_num
             save_movie_name = ['camera' num2str(camera_id) '_trial' sprintf('%03d', trial_id) '.mp4'];
             if exist(fullfile(save_trial_movie_fold_path, save_movie_name))
                 continue;
             end
-            trial_start_frame = ref_camera_task_timing(1, trial_id);
-            trial_end_frame = ref_camera_task_timing(2, trial_id);
+            trial_start_frame = synchronized_timings(1, trial_id);
+            trial_end_frame = synchronized_timings(2, trial_id);
             ref_trial_images = generateTrialImages(full_movie_obj, trial_start_frame, trial_end_frame);
             if isempty(ref_trial_images)
                 disp(['the following video could not be generated: 【camera' num2str(camera_id) '-trial' sprintf('%03d', trial_id) '】'])

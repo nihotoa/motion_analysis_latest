@@ -12,8 +12,20 @@ falling_indices: [double array], List of indicies at the time when the value fal
 %}
 
 function [rising_indicies, falling_indices] = findBinaryChanges(ref_array)
-cluster_idx = kmeans(ref_array(:), 2);
-bright_indicies = find(cluster_idx==2);
+[cluster_idx, center_value_list] = kmeans(ref_array(:), 2);
+
+% perform smoothing(handling for when some object unexpectedly overlaps with the LED)
+window_size = 3;
+for frame_idx = (window_size+1) : (length(cluster_idx) - window_size)
+    ref_frame_cluster_idx = cluster_idx(frame_idx);
+    if and(not(ref_frame_cluster_idx == cluster_idx(frame_idx - window_size)), not(ref_frame_cluster_idx == cluster_idx(frame_idx + window_size)))
+        cluster_idx(frame_idx-window_size+1:frame_idx+window_size-1) = cluster_idx(frame_idx - window_size);
+    end
+end
+
+% 
+[~, bright_cluster_num] = max(center_value_list);
+bright_indicies = find(cluster_idx == bright_cluster_num);
 rising_indicies = eliminate_consective_num(bright_indicies, 'front');
 falling_indices = eliminate_consective_num(bright_indicies, 'back');
 end
