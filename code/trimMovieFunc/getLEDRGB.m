@@ -38,6 +38,10 @@ while frame_idx < ref_video_obj.NumFrames
             LED_figure = gcf;
             title(['Please click on the ' LED_color ' LED'], FontSize=15);
             [LED_x, LED_y] = ginput(1);
+
+            % round to nearest integer
+            LED_x = round(LED_x);
+            LED_y = round(LED_y);
             
             hold on 
             fprintf("if it's ok, press 'Enter', if not, press 'd'\n")
