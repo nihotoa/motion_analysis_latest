@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %{
 [your operation]
 1. Please 
@@ -31,8 +31,10 @@ pre: nothing
 post: comming soon...
 
 [caution!!]
-出力される動画は問答無用で.mp4(めんどくさいから)
-タスク開始は青色LEDが消える瞬間、タスク終了は青色LEDが点灯する瞬間であることに注意
+> 出力される動画は問答無用で.mp4(めんどくさいから)
+> タスク開始は青色LEDが消える瞬間、タスク終了は青色LEDが点灯する瞬間であることに注意
+> 現状はLED_colorはblue(LEDカーテンのon, off)のみ。今後増えるかも
+> 既に作成されているデータは上書きしないので、作り直したい場合は既に作成されているデータを消去してからこの関数を実行して
 
 [Improvement points(Japanaese)]
 >dirdir, uiselectはEMG_analysis_latestのttbで定義されているので、commonCodeと一緒に、このプロジェクトの兄弟ディレクトリの中に
@@ -42,13 +44,13 @@ post: comming soon...
 falseだった時の処理の中身を関数にしたほうがいい
  
 %}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear;
 
 %% set param
 task_movie_extension = 'mp4';  
 monkeyname = 'Hu';
-LED_color = 'blue'; % 'red' / 'blue'
+LED_color = 'blue'; % 'blue'
 record_Hz = 200; % recording framerate[Hz]
 
 %% code section
@@ -71,11 +73,6 @@ switch LED_color
         start_timing_id = 1;
         end_timing_id = 6;
         focus_rgb_index = 3;
-    case 'red'
-        timing_label = 'food';
-        start_timing_id = 3;
-        end_timing_id = 4;
-        focus_rgb_index = 1;
 end
 
 for date_index = 1:length(ref_dates)
@@ -96,7 +93,7 @@ for date_index = 1:length(ref_dates)
 
     is_timing_file_exists = false;
     if exist(fullfile(timing_save_fold_path, timing_file_name))
-        fprintf(['the file created by this procecss has already been created in:【' fullfile(timing_save_fold_path, timing_file_name) '】\n']);
+        fprintf([timing_label ' event timing data from the video has already been created in:【' fullfile(timing_save_fold_path, timing_file_name) '】\n']);
         is_timing_file_exists = true;
         load(fullfile(timing_save_fold_path, timing_file_name), 'ref_timings_frame_idx_list');
     end
@@ -104,6 +101,7 @@ for date_index = 1:length(ref_dates)
     if is_timing_file_exists == false
         ref_timings_frame_idx_list = cell(1, camera_indicies(end));
         for camera_id = camera_indicies
+            % obtain the RGB values of the LED in the video and save them as .mat file
             rgb_save_file_name = ['camera' num2str(camera_id) '_RGB.mat'];
             save_file_path = fullfile(rgb_save_fold_path, rgb_save_file_name);
             if exist(save_file_path)
@@ -112,15 +110,14 @@ for date_index = 1:length(ref_dates)
                 ref_camera_movie_path = fullfile(ref_task_movie_fold, ['camera' num2str(camera_id) '.' task_movie_extension]);
                 rgb_value_array = getLEDRGB(ref_camera_movie_path, LED_color);
                 save(save_file_path, "rgb_value_array");
+                disp(['【"rgb_value_array" of camera' num2str(camera_id) ' has successfully been created as' fullfile(save_file_path) '】'])
             end
     
-            % find the start and end timing by using 'rgb_value_array'
+            % find the 'task_start' and 'task_end' timing by using 'rgb_value_array'
             focus_rgb_array =  rgb_value_array(focus_rgb_index, :);
             switch LED_color
-                case 'red'
-                    [start_timings, end_timings] = findBinaryChanges(focus_rgb_array);
                 case 'blue'
-                    [end_timings, start_timings] = findBinaryChanges(focus_rgb_array);
+                    [end_timings, start_timings] = findLEDChanges(focus_rgb_array);
                     validate_end_timing_indices = not(end_timings(1, :) == 1);
                     end_timings = end_timings(validate_end_timing_indices);
                     start_timings = start_timings(1:length(end_timings));
@@ -134,6 +131,7 @@ for date_index = 1:length(ref_dates)
             ref_timings_frame_idx_list{camera_id} =ref_timing_data_struct;
         end
         save(fullfile(timing_save_fold_path, timing_file_name), 'ref_timings_frame_idx_list')
+        disp(['【Timing data has successfully been created as ' fullfile(timing_save_fold_path, timing_file_name) '】'])
     end
 
     %% extract and save video from each trial
@@ -170,6 +168,7 @@ for date_index = 1:length(ref_dates)
         for trial_id = 1:trial_num
             save_movie_name = ['camera' num2str(camera_id) '_trial' sprintf('%03d', trial_id) '.mp4'];
             if exist(fullfile(save_trial_movie_fold_path, save_movie_name))
+                disp([save_movie_name ' has already been created']);
                 continue;
             end
             trial_start_frame = synchronized_timings(1, trial_id);

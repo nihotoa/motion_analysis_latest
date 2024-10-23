@@ -19,4 +19,5 @@ for frame_idx = 1:length(trial_images)
     writeVideo(save_trial_movie_obj, trial_images{frame_idx})
 end
 close(save_trial_movie_obj)
+disp([save_movie_name ' has been created successfully!!']);
 end
