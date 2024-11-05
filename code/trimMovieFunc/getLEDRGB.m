@@ -14,6 +14,7 @@ frame (= index). the size is [3, total number of frames]. number of row is 3 and
 %}
 
 function [rgb_value_array] = getLEDRGB(movie_path, LED_color)
+
 try
     ref_video_obj = VideoReader(movie_path);
 catch
@@ -33,8 +34,10 @@ while frame_idx < ref_video_obj.NumFrames
     % Obtaining the image coordinates(x, y) of an LED by GUI operation
     if frame_idx == 1
         while true
+            display_frame_idx= videoGUIOperator(movie_path);
             disp(['Please click on the ' LED_color ' LED']);
-            imshow(ref_frame_img);
+            display_img = read(ref_video_obj, display_frame_idx);
+            imshow(display_img);
             LED_figure = gcf;
             title(['Please click on the ' LED_color ' LED'], FontSize=15);
             [LED_x, LED_y] = ginput(1);

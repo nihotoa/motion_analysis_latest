@@ -97,7 +97,8 @@ for date_index = 1:length(ref_dates)
         is_timing_file_exists = true;
         load(fullfile(timing_save_fold_path, timing_file_name), 'ref_timings_frame_idx_list');
     end
-
+    
+    %% get event timing data from recorded movie
     if is_timing_file_exists == false
         ref_timings_frame_idx_list = cell(1, camera_indicies(end));
         for camera_id = camera_indicies
@@ -118,11 +119,12 @@ for date_index = 1:length(ref_dates)
             switch LED_color
                 case 'blue'
                     [end_timings, start_timings] = findLEDChanges(focus_rgb_array);
+                    %{
                     validate_end_timing_indices = not(end_timings(1, :) == 1);
                     end_timings = end_timings(validate_end_timing_indices);
                     start_timings = start_timings(1:length(end_timings));
+                    %}
             end
-    
             ref_timing_data_struct = struct();
             start_timing_indecies = ones(1, length(start_timings)) * start_timing_id;
             end_timing_indecies = ones(1, length(end_timings)) * end_timing_id;

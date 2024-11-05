@@ -12,6 +12,9 @@ turn_off_indices: [double array], List of indices at the time when the value fal
 [caution]
 this is implemented based on binary classification, so it does not support
 situations that include anything other than the LED being on or  off. (For example, when an object passes through in a waty  that overlaps with the LED)
+
+[improvement point(japanese)]
+エラー文が抽象的すぎるので、もうちょっと考える
 %}
 
 function [light_up_indices, turn_off_indices] = findLEDChanges(ref_array)
@@ -31,4 +34,10 @@ end
 bright_indices = find(cluster_idx == bright_cluster_num);
 light_up_indices = eliminate_consective_num(bright_indices, 'front');
 turn_off_indices = eliminate_consective_num(bright_indices, 'back');
+
+% eliminate the information about the frist frame from 'light_up_indices'(or 'turn_off_indices') & match the number of length between 'light_up_indices' and 'turn_off_indices'
+light_up_indices = light_up_indices(2:end);
+trial_num = length(light_up_indices);
+turn_off_indices = turn_off_indices(1:trial_num);
 end
+
