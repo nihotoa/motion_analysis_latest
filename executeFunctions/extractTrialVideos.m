@@ -163,12 +163,13 @@ for date_index = 1:length(ref_dates)
         ref_camera_movie_path = fullfile(ref_task_movie_fold, ['camera' num2str(camera_id) '.' task_movie_extension]);
         [~, trial_num] = size(synchronized_timings);
         full_movie_obj = VideoReader(ref_camera_movie_path);
-        save_trial_movie_fold_path = fullfile(save_movie_fold_dir, 'trimmed', [timing_label '_on_off'], ref_date, ['camera' num2str(camera_id)]);
+        save_trial_movie_fold_path = fullfile(save_movie_fold_dir, 'trimmed', [timing_label '_on_off'], ref_date, 'videos-raw');
         makefold(save_trial_movie_fold_path);
         
         % extract only the trial part from the video and save them as a new video
         for trial_id = 1:trial_num
-            save_movie_name = ['camera' num2str(camera_id) '_trial' sprintf('%03d', trial_id) '.mp4'];
+            % save_movie_name = ['camera' num2str(camera_id) '_trial' sprintf('%03d', trial_id) '.mp4'];
+            save_movie_name = [ref_date '-trial' sprintf('%03d', trial_id) '-cam' numToAlphabet(camera_id) '.mp4'];
             if exist(fullfile(save_trial_movie_fold_path, save_movie_name))
                 disp([save_movie_name ' has already been created']);
                 continue;
